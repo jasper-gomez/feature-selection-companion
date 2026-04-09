@@ -1,3 +1,5 @@
+## REQUIRED NOTICE
+
 Required Notice: Copyright 2026 [Jasper Gomez](https://github.com/jasper-gomez/feature-selection-companion/tree/main)
 
 # PolyForm Noncommercial License 1.0.0
