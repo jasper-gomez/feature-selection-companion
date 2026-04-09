@@ -1,0 +1,11 @@
+cff-version: 1.2.0
+title: "Feature Selection Companion"
+message: "If you use this framework, prototype, or any part of this repository, please cite it using the following metadata."
+authors:
+  - family-names: Gomez
+    given-names: Jasper
+version: ""
+doi: ""
+date-released: 
+url: "https://github.com/sdbrgo/feature-selection-companion"
+license: "PolyForm Noncommercial License 1.0.0"
