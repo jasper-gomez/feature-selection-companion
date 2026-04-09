@@ -22,7 +22,7 @@ A feature selection decision support system (DSS) that employs variance threshol
 
 This project is licensed under the **PolyForm Noncommercial License 1.0.0**, which allows non-commercial use, modification, and distribution, but prohibits commercial use. Proper attribution is a must. 
 
-###### See the full license text in the ['LICENSE.md'](./LICENSE.md) file.
+###### See the full license text in the [`LICENSE.md`](./LICENSE.md) file.
 
 ---
 
