@@ -8,8 +8,8 @@ A feature selection decision support system (DSS) that employs variance threshol
 
 ### 🗃️Repository Structure
 ```
-├── 📊 repo_name/
-│   ├── 
+├── modules/
+│   ├── dim_reduction.py
 │   ├── 
 │   └── 
 ├── LICENSE.md
