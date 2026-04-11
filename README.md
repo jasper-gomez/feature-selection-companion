@@ -14,7 +14,8 @@ A feature selection decision support system (DSS) that employs variance threshol
 │   └── 
 ├── LICENSE.md
 ├── CITATION.cff
-└── README.md
+├── README.md
+└── requirements.txt
 ```
 ---
 
@@ -32,7 +33,7 @@ When building upon or reusing this work, please include:
 
 - **Author name**: Jasper Gomez  
 - **Repository name**: Feature Selection Companion  
-- **Repository link**: https://github.com/jasper-gomez/feature-selection-companion/tree/main
+- **Repository link**: https://github.com/jasper-gomez/feature-selection-companion
 - **Citation using the [`CITATION.cff`](./CITATION.cff) metadata**  
 - A note in your documentation, publication, or code comments acknowledging the original work
 
