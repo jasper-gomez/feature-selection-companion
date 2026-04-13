@@ -16,16 +16,19 @@ def get_file(file):
     else:
         return None
     
-def calculate_dim_reduction(df, variance_threshold, mvr_threshold):
+def calculate_dim_reduction(df, variance_threshold, mvr_threshold, corr_threshold, target_col):
     var_summary_table, variance_fig = _calculate_variance(df, variance_threshold)
     mvr_summary_table, mvr_fig = _calculate_missing_value_ratio(df, mvr_threshold)
-    correlation_dict = _calculate_correlation(df)
+    correlation_dict = _calculate_correlation(df, target_col, corr_threshold)
 
     return var_summary_table, variance_fig, mvr_summary_table, mvr_fig, correlation_dict
 
 # ======================================================================================
 #                                   HELPER FUNCTIONS
 # ======================================================================================
+
+
+# ======================== VARIANCE THRESHOLDING =====================================
 
 def _categorical_diversity(column):
     # calculate the entropy of the column
@@ -87,6 +90,7 @@ def _calculate_variance(df, variance_threshold):
 
     return var_summary_table, variance_fig
 
+# ======================== MISSING VALUE RATIO =====================================
 
 def _calculate_missing_value_ratio(df, mvr_threshold):
 
@@ -121,6 +125,15 @@ def _calculate_missing_value_ratio(df, mvr_threshold):
 
     return mvr_summary_table, mvr_fig
 
-def _calculate_correlation(df):
+# ======================== CORRELATION =====================================
+
+def _calculate_correlation(df, corr_threshold, target_col=None):
 
     # calculate the correlation of each column with the target variable
+    if target_col is None:
+        # include all columns in the correlation matrix
+        # call function to calculate correlation matrix and identify highly correlated features
+        # 1. separate numeric to non-numeric columns
+        # 2. 
+    else:
+        # only calculate correlation of features with the target variable
