@@ -11,7 +11,6 @@ from sklearn.feature_selection import VarianceThreshold
 def get_file(file):
     if file is not None:
         df = pd.read_csv(file)
-
         return df
     else:
         return None
@@ -19,9 +18,17 @@ def get_file(file):
 def calculate_dim_reduction(df, variance_threshold, mvr_threshold, corr_threshold, target_col):
     var_summary_table, variance_fig = _calculate_variance(df, variance_threshold)
     mvr_summary_table, mvr_fig = _calculate_missing_value_ratio(df, mvr_threshold)
-    correlation_dict = _calculate_correlation(df, target_col, corr_threshold)
+    corr_summary_table, corr_fig = _calculate_correlation(df, target_col, corr_threshold)
 
-    return var_summary_table, variance_fig, mvr_summary_table, mvr_fig, correlation_dict
+    # consolidator that consolidats all features and how many times got flagged
+    # as a removable feature across all 3 methods (descending order)
+    all_flagged_features = pd.concat([var_summary_table, mvr_summary_table, corr_summary_table])
+    feature_counts = all_flagged_features['Feature'].value_counts()
+    consolidated_table = feature_counts.to_frame().reset_index()
+    consolidated_table.columns = ['Feature', 'Flag Count']
+    consolidated_table = consolidated_table.sort_values(by='Flag Count', ascending=False)
+
+    return consolidated_table, var_summary_table, variance_fig, mvr_summary_table, mvr_fig, corr_summary_table, corr_fig
 
 # ======================================================================================
 #                                   HELPER FUNCTIONS
@@ -75,7 +82,7 @@ def _calculate_variance(df, variance_threshold):
     # 5. GENERATE PLOT OBJECT
     plt.figure(figsize=(10, 6))
     sns.barplot(data=plot_df, x='Score', y='Feature', palette=plot_df['Color'].tolist())
-    plt.axvline(x=variance_threshold, color='orange', linestyle='--', label=f'Numeric Threshold ({variance_threshold})')
+    plt.axvline(x=variance_threshold, color='red', linestyle='--', label=f'Numeric Threshold ({variance_threshold})')
     plt.title('Feature Variance & Diversity Scores')
     plt.xlabel('Normalized Variance / Diversity Score')
     plt.legend(['Threshold'])
@@ -109,7 +116,7 @@ def _calculate_missing_value_ratio(df, mvr_threshold):
     # generate plot object
     plt.figure(figsize=(10, 6))
     sns.barplot(data=plot_df, x='Missing_Value_Ratio', y='Feature', palette=plot_df['Color'].tolist())
-    plt.axvline(x=mvr_threshold, color='orange', linestyle='--', label=f'Missing Value Threshold ({mvr_threshold})')
+    plt.axvline(x=mvr_threshold, color='red', linestyle='--', label=f'Missing Value Threshold ({mvr_threshold})')
     plt.title('Feature Missing Value Ratios')
     plt.xlabel('Missing Value Ratio')
     plt.legend(['Threshold'])
@@ -129,21 +136,49 @@ def _calculate_missing_value_ratio(df, mvr_threshold):
 
 def _calculate_correlation(df, corr_threshold, target_col=None):
 
-    # calculate the correlation of each column with the target variable
     if target_col is None:
-        # include all columns in the correlation matrix
-        # call function to calculate correlation matrix and identify highly correlated features
-        # 1. calculate corelation matrix 
-        # 2. plot heatmap
-        # 3. save heatmap as a figure object
-        # 4. record paired features with correlation above threshold in a summary table in DataFrame format (descending order)
-        # 5. return both summary table and figure object
+        return _corr_no_target(df, corr_threshold)
     else:
-        # only calculate correlation of features with the target variable
-        # call function to use corr() and corrwith() to calculate correlation with target variable and identify highly correlated features
-        # 1. calculate correlation for all features
-        # 2. calculate correlation for all features with target variable
-        # 3. plot heatmap of correlation with target variable
-        # 4. save heatmap as a figure object
-        # 5. record features with correlation above threshold in a summary table in DataFrame format (descending order)
-        # 6. return both summary table and figure object
+        return _corr_with_target(df, target_col, corr_threshold)
+
+def _corr_no_target(df, corr_threshold):
+
+    corr_matrix = df.corr()
+
+    plt.figure(figsize=(12, 10))
+    sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', vmin=-1, vmax=1)
+    plt.title('Feature Correlation Matrix')
+    plt.tight_layout()
+    
+    corr_fig = plt.gcf() # Capture the figure object
+
+    # Identify highly correlated pairs
+    upper_tri = corr_matrix.where(np.triu(np.ones(corr_matrix.shape), k=1).astype(bool))
+    corr_summary_table = upper_tri.stack().reset_index()
+    corr_summary_table.columns = ['Feature_1', 'Feature_2', 'Correlation']
+    corr_summary_table = corr_summary_table[corr_summary_table['Correlation'].abs() > corr_threshold]
+    corr_summary_table = corr_summary_table.sort_values(by='Correlation', key=abs, ascending=False)
+
+    return corr_summary_table, corr_fig
+
+def _corr_with_target(df, target_col, corr_threshold):
+
+    corr_matrix = df.corr()
+    target_corr = corr_matrix[target_col].drop(target_col)
+
+    plt.figure(figsize=(8, 6))
+    sns.barplot(x=target_corr.values, y=target_corr.index, palette=['red' if abs(x) > corr_threshold else 'blue' for x in target_corr.values])
+    plt.axvline(x=corr_threshold, color='red', linestyle='--', label=f'Correlation Threshold ({corr_threshold})')
+    plt.axvline(x=-corr_threshold, color='red', linestyle='--')
+    plt.title(f'Correlation of Features with Target Variable: {target_col}')
+    plt.xlabel('Correlation Coefficient')
+    plt.legend(['Threshold'])
+    plt.tight_layout()
+    
+    corr_fig = plt.gcf() # Capture the figure object
+
+    # Identify features with high correlation to target variable
+    corr_summary_table = target_corr[abs(target_corr) > corr_threshold].sort_values(key=abs, ascending=False).reset_index()
+    corr_summary_table.columns = ['Feature', 'Correlation']
+
+    return corr_summary_table, corr_fig
