@@ -133,7 +133,17 @@ def _calculate_correlation(df, corr_threshold, target_col=None):
     if target_col is None:
         # include all columns in the correlation matrix
         # call function to calculate correlation matrix and identify highly correlated features
-        # 1. separate numeric to non-numeric columns
-        # 2. 
+        # 1. calculate corelation matrix 
+        # 2. plot heatmap
+        # 3. save heatmap as a figure object
+        # 4. record paired features with correlation above threshold in a summary table in DataFrame format (descending order)
+        # 5. return both summary table and figure object
     else:
         # only calculate correlation of features with the target variable
+        # call function to use corr() and corrwith() to calculate correlation with target variable and identify highly correlated features
+        # 1. calculate correlation for all features
+        # 2. calculate correlation for all features with target variable
+        # 3. plot heatmap of correlation with target variable
+        # 4. save heatmap as a figure object
+        # 5. record features with correlation above threshold in a summary table in DataFrame format (descending order)
+        # 6. return both summary table and figure object
