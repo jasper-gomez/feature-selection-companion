@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import gradio as gr
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.feature_selection import VarianceThreshold
@@ -8,17 +9,34 @@ from sklearn.feature_selection import VarianceThreshold
 #                                   PUBLIC FUNCTIONS
 # ======================================================================================
 
-def get_file(file):
+def get_cols(file) -> tuple:
     if file is not None:
-        df = pd.read_csv(file)
-        return df
+        df = pd.read_csv(file, nrows=0)
+        cols = list(df.columns)
+
+        dropdown_update = gr.Dropdown(
+            choices=["None"] + cols, 
+            value="None", 
+            visible=True, 
+            label="Select Target Column for Correlation Analysis"
+        )
+
+        analyze_button_update = gr.Button(
+            "Analyze File",
+            visible=True
+        )
+
+        return dropdown_update, analyze_button_update
     else:
-        return None
+        return None, None
     
-def calculate_dim_reduction(df, variance_threshold, mvr_threshold, corr_threshold, target_col):
+def calculate_dim_reduction(file_input, variance_threshold, mvr_threshold, corr_threshold, target_col):
+
+    df = pd.read_csv(file_input)
+
     var_summary_table, variance_fig = _calculate_variance(df, variance_threshold)
     mvr_summary_table, mvr_fig = _calculate_missing_value_ratio(df, mvr_threshold)
-    corr_summary_table, corr_fig = _calculate_correlation(df, target_col, corr_threshold)
+    corr_summary_table, corr_gradio, corr_fig = _calculate_correlation(df, corr_threshold, target_col)
 
     # consolidator that consolidats all features and how many times got flagged
     # as a removable feature across all 3 methods (descending order)
@@ -28,7 +46,7 @@ def calculate_dim_reduction(df, variance_threshold, mvr_threshold, corr_threshol
     consolidated_table.columns = ['Feature', 'Flag Count']
     consolidated_table = consolidated_table.sort_values(by='Flag Count', ascending=False)
 
-    return consolidated_table, var_summary_table, variance_fig, mvr_summary_table, mvr_fig, corr_summary_table, corr_fig
+    return consolidated_table, var_summary_table, variance_fig, mvr_summary_table, mvr_fig, corr_gradio, corr_fig
 
 # ======================================================================================
 #                                   HELPER FUNCTIONS
@@ -82,13 +100,13 @@ def _calculate_variance(df, variance_threshold):
     # 5. GENERATE PLOT OBJECT
     plt.figure(figsize=(10, 6))
     sns.barplot(data=plot_df, x='Score', y='Feature', palette=plot_df['Color'].tolist())
-    plt.axvline(x=variance_threshold, color='red', linestyle='--', label=f'Numeric Threshold ({variance_threshold})')
+    plt.axvline(x=variance_threshold, color='blue', linestyle='--', label=f'Numeric Threshold ({variance_threshold})')
     plt.title('Feature Variance & Diversity Scores')
     plt.xlabel('Normalized Variance / Diversity Score')
     plt.legend(['Threshold'])
     plt.tight_layout()
     
-    variance_fig = plt.gcf() # Capture the figure object
+    variance_fig = plt.gcf() # save current figure object
 
     # 6. create the summary table
     var_summary_table = plot_df[plot_df['Color'] == 'red'].copy()
@@ -122,7 +140,7 @@ def _calculate_missing_value_ratio(df, mvr_threshold):
     plt.legend(['Threshold'])
     plt.tight_layout()
     
-    mvr_fig = plt.gcf() # Capture the figure object
+    mvr_fig = plt.gcf() # save current figure object
 
     # create a summary table of columns with missing value ratio above the threshold
     # in ascending order
@@ -134,36 +152,39 @@ def _calculate_missing_value_ratio(df, mvr_threshold):
 
 # ======================== CORRELATION =====================================
 
-def _calculate_correlation(df, corr_threshold, target_col=None):
+def _calculate_correlation(df, corr_threshold, target_col="None"):
 
-    if target_col is None:
+    if target_col == "None":
         return _corr_no_target(df, corr_threshold)
     else:
         return _corr_with_target(df, target_col, corr_threshold)
 
 def _corr_no_target(df, corr_threshold):
 
-    corr_matrix = df.corr()
+    corr_matrix = df.corr(numeric_only=True)
 
     plt.figure(figsize=(12, 10))
     sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', vmin=-1, vmax=1)
     plt.title('Feature Correlation Matrix')
     plt.tight_layout()
     
-    corr_fig = plt.gcf() # Capture the figure object
+    corr_fig = plt.gcf() # save current figure object
 
-    # Identify highly correlated pairs
+    # identify highly correlated pairs
     upper_tri = corr_matrix.where(np.triu(np.ones(corr_matrix.shape), k=1).astype(bool))
     corr_summary_table = upper_tri.stack().reset_index()
     corr_summary_table.columns = ['Feature_1', 'Feature_2', 'Correlation']
     corr_summary_table = corr_summary_table[corr_summary_table['Correlation'].abs() > corr_threshold]
     corr_summary_table = corr_summary_table.sort_values(by='Correlation', key=abs, ascending=False)
 
-    return corr_summary_table, corr_fig
+    # return as a gr.DataFrame for display in the app
+    corr_gradio = gr.DataFrame(corr_summary_table, headers=["Feature 1", "Feature 2", "Correlation"], datatype=["str", "str", "number"])
+
+    return corr_summary_table, corr_gradio, corr_fig
 
 def _corr_with_target(df, target_col, corr_threshold):
 
-    corr_matrix = df.corr()
+    corr_matrix = df.corr(numeric_only=True)
     target_corr = corr_matrix[target_col].drop(target_col)
 
     plt.figure(figsize=(8, 6))
@@ -175,10 +196,13 @@ def _corr_with_target(df, target_col, corr_threshold):
     plt.legend(['Threshold'])
     plt.tight_layout()
     
-    corr_fig = plt.gcf() # Capture the figure object
+    corr_fig = plt.gcf() # save current figure object
 
-    # Identify features with high correlation to target variable
+    # identify features with high correlation to target variable
     corr_summary_table = target_corr[abs(target_corr) > corr_threshold].sort_values(key=abs, ascending=False).reset_index()
     corr_summary_table.columns = ['Feature', 'Correlation']
 
-    return corr_summary_table, corr_fig
+    # return as a gr.DataFrame for display in the app
+    corr_gradio = gr.DataFrame(corr_summary_table, headers=["Feature", "Correlation"], datatype=["str", "number"])
+
+    return corr_summary_table, corr_gradio, corr_fig
