@@ -163,8 +163,11 @@ def _corr_no_target(df, corr_threshold):
 
     corr_matrix = df.corr(numeric_only=True)
 
+    # create mask to show only lower half of the correlation matrix
+    mask = np.triu(np.ones_like(corr_matrix, dtype=bool))
+
     plt.figure(figsize=(12, 10))
-    sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', vmin=-1, vmax=1)
+    sns.heatmap(corr_matrix, mask=mask, annot=True, cmap='coolwarm', vmin=-1, vmax=1)
     plt.title('Feature Correlation Matrix')
     plt.tight_layout()
     
